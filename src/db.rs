@@ -2,9 +2,9 @@ use std::str;
 use std::sync::Arc;
 
 use futures::StreamExt;
-use mongodb::bson::{doc, document::Document};
-use mongodb::{options::ClientOptions, Client, Collection};
-use serde::{Serialize, Deserialize};
+use mongodb::bson::{ doc, document::Document };
+use mongodb::{ options::ClientOptions, Client, Collection };
+use serde::{ Serialize, Deserialize };
 
 type MongoResult<T> = std::result::Result<T, mongodb::error::Error>;
 
@@ -19,6 +19,7 @@ const SLACK_USER_NAME: &str = "slack_user_name";
 
 const BRYXCOIN_WALLET: &str = "bryxcoin_wallet";
 const BRYXCOIN_ADDRESS: &str = "bryxcoin_address";
+const BRYXCOIN_PASSWORD : &str = "bryxcoin_password";
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct User {
@@ -29,6 +30,7 @@ pub struct User {
     pub slack_user_name: String,
     pub bryxcoin_wallet: String,
     pub bryxcoin_address: String,
+    pub bryxcoin_password: String
 }
 
 #[derive(Clone, Debug)]
@@ -40,7 +42,7 @@ impl DB {
     pub async fn init() -> MongoResult<Self> {
         let conn_str = std::env::var("MONGO_CONN_STR").expect("$MONGO_CONN_STR is not set!");
         let mut client_options = ClientOptions::parse(&conn_str).await?;
-        
+
         client_options.app_name = Some("bryxcoin".to_string());
 
         println!("Connected!");
@@ -50,16 +52,30 @@ impl DB {
         })
     }
 
-    pub async fn fetch_users(&self, first_name: &str, last_name: &str)-> MongoResult<Vec<User>> {
+    pub async fn fetch_by_addr(&self, addr: &str) -> Option<User> {
+        self.get_collection()
+            .find_one(doc! { "bryxcoin_address": addr }, None).await
+            .expect("failed to query users collection")
+            .and_then(|doc| { self.doc_to_user(&doc).ok() })
+    }
+
+    pub async fn addr_exists(&self, addr: &str) -> bool {
+        match self.fetch_by_addr(&addr).await {
+            Some(_) => true,
+            None => false
+        }
+    }
+
+    pub async fn fetch_users(&self, first_name: &str, last_name: &str) -> MongoResult<Vec<User>> {
         let mut cursor = self
             .get_collection()
             .find(
                 doc! {
                     "first_name": first_name,
                     "last_name": last_name
-                }
-                , None)
-            .await?;
+                },
+                None
+            ).await?;
 
         let mut res: Vec<User> = Vec::new();
         while let Some(doc) = cursor.next().await {
@@ -77,6 +93,7 @@ impl DB {
         let slack_user_name = doc.get_str(SLACK_USER_NAME).unwrap();
         let bryxcoin_address = doc.get_str(BRYXCOIN_ADDRESS).unwrap();
         let bryxcoin_wallet = doc.get_str(BRYXCOIN_WALLET).unwrap();
+        let bryxcoin_password = doc.get_str(BRYXCOIN_PASSWORD).unwrap();
 
         let user = User {
             id: id.to_hex(),
@@ -85,7 +102,8 @@ impl DB {
             slack_user_id: slack_user_id.to_owned(),
             slack_user_name: slack_user_name.to_owned(),
             bryxcoin_address: bryxcoin_address.to_owned(),
-            bryxcoin_wallet: bryxcoin_wallet.to_owned()
+            bryxcoin_wallet: bryxcoin_wallet.to_owned(),
+            bryxcoin_password: bryxcoin_password.to_owned()
         };
 
         Ok(user)
