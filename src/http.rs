@@ -43,6 +43,7 @@ struct Users {
 }
 
 fn reject(justification: &str) -> HttpResponse {
+    println!("[REJECT] {}", justification);
     HttpResponse::BadRequest().json(RequestFailure {
         status: "fail",
         justification,
@@ -53,6 +54,7 @@ pub async fn handle_tx(
     req: Json<NewTxRequestBody>,
     data: Data<Arc<Mutex<AppData<'_>>>>
 ) -> impl Responder {
+    println!("[IN] /tx from: {} to: {}, for {} bxcn", req.from_addr, req.to_addr, req.amt);
     let AppData { db, ledger,  .. } = &mut *data.lock().expect("failed to lock app data mutex");
     let NewTxRequestBody { amt, from_addr, to_addr, secret } = req.into_inner();
 

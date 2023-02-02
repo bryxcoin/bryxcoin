@@ -17,6 +17,7 @@ ssh-key = { version = "0.5.1", features = ["alloc", "ed25519"] }
 config = { version = "0.13.2" }
 lazy_static = "1.4.0"
 alphanumeric-sort = "1.4.4"
+env_logger = "0.10.0"
 
 [package.metadata.deb]
 maintainer = "Tyler Holewinski <erwijet@gmail.com>"

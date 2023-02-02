@@ -63,6 +63,11 @@ async fn main() -> std::io::Result<()> {
     println!("user_collection: {}", &SETTINGS.mongo_user_collection);
     println!("user_database: {}", &SETTINGS.mongo_user_database);
 
+    println!("-------[waiting for traffic]-------");
+
+    std::env::set_var("RUST_LOG", "actix_web=info");
+    env_logger::init();
+
     HttpServer::new(move || {
         App::new()
             .app_data(Data::new(data.clone()))
